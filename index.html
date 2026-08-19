@@ -1,3 +1,4 @@
+```html
 <!DOCTYPE html>
 <html lang="pl">
 <head>
@@ -177,17 +178,18 @@
         const app = initializeApp(firebaseConfig);
         const database = getDatabase(app);
 
+        // Współrzędne wzdłuż ul. Orlej przy Galerii Łódzkiej (od ul. Sienkiewicza w stronę ul. Kilińskiego)
         const SLUPKI_CONFIG = [
-            { id: 'A1',  lat: 51.7591, lng: 19.4560 },
-            { id: 'A2',  lat: 51.7592, lng: 19.4561 },
-            { id: 'A3',  lat: 51.7593, lng: 19.4562 },
-            { id: 'A4',  lat: 51.7594, lng: 19.4563 },
-            { id: 'A5',  lat: 51.7595, lng: 19.4564 },
-            { id: 'A6',  lat: 51.7596, lng: 19.4565 },
-            { id: 'A7',  lat: 51.7597, lng: 19.4566 },
-            { id: 'A8',  lat: 51.7598, lng: 19.4567 },
-            { id: 'A9',  lat: 51.7599, lng: 19.4568 },
-            { id: 'A10', lat: 51.7600, lng: 19.4569 }
+            { id: 'A1',  lat: 51.75820, lng: 19.45980 },
+            { id: 'A2',  lat: 51.75822, lng: 19.46010 },
+            { id: 'A3',  lat: 51.75824, lng: 19.46040 },
+            { id: 'A4',  lat: 51.75826, lng: 19.46070 },
+            { id: 'A5',  lat: 51.75828, lng: 19.46100 },
+            { id: 'A6',  lat: 51.75830, lng: 19.46130 },
+            { id: 'A7',  lat: 51.75832, lng: 19.46160 },
+            { id: 'A8',  lat: 51.75834, lng: 19.46190 },
+            { id: 'A9',  lat: 51.75836, lng: 19.46220 },
+            { id: 'A10', lat: 51.75838, lng: 19.46250 }
         ];
 
         let mapa = null;
@@ -213,7 +215,7 @@
 
         function inicjalizujPilota() {
             if (!mapa) {
-                mapa = L.map('map').setView([51.7595, 19.4565], 16);
+                mapa = L.map('map').setView([51.7583, 19.4611], 17);
                 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(mapa);
 
                 SLUPKI_CONFIG.forEach(s => {
