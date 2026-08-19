@@ -1,4 +1,3 @@
-```html
 <!DOCTYPE html>
 <html lang="pl">
 <head>
@@ -17,9 +16,9 @@
         
         .btn {
             width: 100%;
-            padding: 16px;
-            margin: 8px 0;
-            font-size: 18px;
+            padding: 14px;
+            margin: 6px 0;
+            font-size: 16px;
             font-weight: bold;
             color: white;
             background-color: #2980b9;
@@ -35,9 +34,24 @@
         .btn-czerwony:active { background-color: #c0392b; }
         .btn-pomaranczowy { background-color: #e67e22; }
         .btn-pomaranczowy:active { background-color: #d35400; }
+        .btn-fioletowy { background-color: #9b59b6; }
+        .btn-fioletowy:active { background-color: #8e44ad; }
 
-        #map { width: 100%; height: 220px; border-radius: 8px; margin-bottom: 15px; border: 2px solid #555; }
+        #map { width: 100%; height: 200px; border-radius: 8px; margin-bottom: 15px; border: 2px solid #555; }
         
+        .statystyki-bar {
+            width: 100%;
+            background: #2c3e50;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            font-size: 15px;
+            font-weight: bold;
+            border: 1px solid #34495e;
+            display: flex;
+            justify-content: space-around;
+        }
+
         .parking-container {
             width: 100%;
             background: #111;
@@ -68,20 +82,21 @@
             background: #222;
             border: 2px solid #555;
             border-radius: 6px;
-            padding: 8px 2px;
+            padding: 6px 2px;
             cursor: pointer;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            min-height: 55px;
+            min-height: 60px;
             transition: all 0.2s;
         }
         .parking-spot.wolny { border-color: #2ecc71; color: #2ecc71; }
         .parking-spot.zajety { border-color: #e74c3c; color: #e74c3c; background: #3a1a1a; }
         .parking-spot.wybrany { outline: 3px solid #f1c40f; transform: scale(1.04); }
         .parking-spot .spot-id { font-weight: bold; font-size: 13px; }
-        .parking-spot .spot-status { font-size: 9px; margin-top: 3px; font-weight: bold; }
+        .parking-spot .spot-status { font-size: 9px; margin-top: 2px; font-weight: bold; }
+        .parking-spot .spot-time { font-size: 8px; margin-top: 2px; color: #ccc; }
 
         .panel-akcji-pilot {
             width: 100%;
@@ -90,10 +105,39 @@
             border-radius: 8px;
             margin-bottom: 15px;
             display: none;
+            text-align: left;
         }
         .panel-akcji-pilot.aktywny { display: block; }
-        .prip-buttons { display: flex; gap: 10px; margin-top: 10px; }
-        .prip-buttons .btn { margin: 0; }
+        
+        .form-group {
+            margin: 10px 0;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        .form-group label { font-size: 13px; color: #ccc; }
+        .form-group select {
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid #555;
+            background: #222;
+            color: white;
+            font-size: 15px;
+        }
+
+        .komunikat-blad {
+            background: #c0392b;
+            color: white;
+            padding: 10px;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            font-size: 13px;
+            display: none;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        .prip-buttons { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
 
         #kolo { width: 160px; height: 160px; border-radius: 50%; margin: 20px auto; background-color: #555; transition: background-color 0.3s ease; }
         #tekst { font-size: 22px; font-weight: bold; margin-bottom: 15px; }
@@ -106,7 +150,7 @@
         }
 
         #debug { margin-top: 15px; font-family: monospace; font-size: 13px; color: #ff9f43; }
-        .btn-powrot { margin-top: 15px; background-color: #555; width: auto; padding: 8px 20px; font-size: 14px; }
+        .btn-powrot { margin-top: 15px; background-color: #555; width: auto; padding: 8px 20px; font-size: 14px; align-self: center; }
     </style>
 </head>
 <body>
@@ -119,20 +163,41 @@
 
     <div id="widok-pilot" class="widok">
         <h2>PANEL PILOTA - PARKING</h2>
+        
+        <div class="statystyki-bar" id="statystyki-parkingu">
+            <span>Wolne: - / 10</span>
+            <span>Zajęte: - / 10</span>
+        </div>
+
         <div id="map"></div>
 
         <div class="parking-container">
             <div class="parking-row" id="parking-rzad-1"></div>
-            <div class="parking-road">PAS RUCHU</div>
+            <div class="parking-road">PAS RUCHU (UL. ORLA)</div>
             <div class="parking-row" id="parking-rzad-2"></div>
         </div>
 
         <div id="panel-akcji" class="panel-akcji-pilot">
             <h3 id="wybrany-slupek-naglowek">Wybrane miejsce: -</h3>
-            <p id="wybrany-slupek-status" style="font-size: 14px;"></p>
+            <p id="wybrany-slupek-status" style="font-size: 14px; margin-bottom: 8px;"></p>
+            <p id="wybrany-slupek-czas" style="font-size: 13px; color: #f1c40f; margin-bottom: 10px;"></p>
+            
+            <div id="komunikat-blad" class="komunikat-blad"></div>
+
+            <div class="form-group" id="grupa-czasu">
+                <label for="czas-rezerwacji">Czas rezerwacji:</label>
+                <select id="czas-rezerwacji">
+                    <option value="15">15 minut</option>
+                    <option value="30" selected>30 minut</option>
+                    <option value="60">1 godzinę</option>
+                    <option value="120">2 godziny</option>
+                </select>
+            </div>
+
             <div class="prip-buttons">
-                <button class="btn btn-czerwony" onclick="rezerwujWybrany()">REZERWUJ</button>
-                <button class="btn btn-zielony" onclick="zwolnijWybrany()">ZWOLNIJ</button>
+                <button class="btn btn-czerwony" id="btn-rezerwuj" onclick="rezerwujWybrany()">REZERWUJ</button>
+                <button class="btn btn-fioletowy" id="btn-przedluz" onclick="przedluzWybrany()">PRZEDŁUŻ (+15 MIN)</button>
+                <button class="btn btn-zielony" id="btn-zwolnij" onclick="zwolnijWybrany()">ZWOLNIJ</button>
             </div>
         </div>
 
@@ -178,7 +243,6 @@
         const app = initializeApp(firebaseConfig);
         const database = getDatabase(app);
 
-        // Współrzędne wzdłuż ul. Orlej przy Galerii Łódzkiej (od ul. Sienkiewicza w stronę ul. Kilińskiego)
         const SLUPKI_CONFIG = [
             { id: 'A1',  lat: 51.75820, lng: 19.45980 },
             { id: 'A2',  lat: 51.75822, lng: 19.46010 },
@@ -201,6 +265,7 @@
         let audioCtx = null;
         let interfejsOdblokowany = false;
         let poprzedniStan = null;
+        let intervalZegara = null;
 
         window.przejdzDo = function(idWidoku) {
             document.querySelectorAll('.widok').forEach(el => el.classList.remove('aktywny'));
@@ -212,6 +277,13 @@
                 generujLasteWyboruSlupka();
             }
         };
+
+        function pobierzStatusIEndtime(stan) {
+            if (typeof stan === 'object' && stan !== null) {
+                return { status: Number(stan.status || 0), doKiedy: Number(stan.doKiedy || 0) };
+            }
+            return { status: Number(stan || 0), doKiedy: 0 };
+        }
 
         function inicjalizujPilota() {
             if (!mapa) {
@@ -227,10 +299,37 @@
             }
             setTimeout(() => mapa.invalidateSize(), 200);
 
+            if (!intervalZegara) {
+                intervalZegara = setInterval(aktualizujWidokPilota, 5000);
+            }
+
             onValue(ref(database, 'slupki'), (snapshot) => {
                 stanySlupkow = snapshot.val() || {};
                 aktualizujWidokPilota();
             });
+        }
+
+        function formatujPozostalyCzas(doKiedy) {
+            if (!doKiedy) return "";
+            const teraz = Date.now();
+            const roznicaMs = doKiedy - teraz;
+            if (roznicaMs <= 0) return "Wygasa";
+            
+            const minuty = Math.ceil(roznicaMs / (1000 * 60));
+            if (minuty > 60) {
+                const h = Math.floor(minuty / 60);
+                const m = minuty % 60;
+                return `za ${h}h ${m}m`;
+            }
+            return `za ${minuty}m`;
+        }
+
+        function formatujGodzine(doKiedy) {
+            if (!doKiedy) return "";
+            const d = new Date(doKiedy);
+            const hh = String(d.getHours()).padStart(2, '0');
+            const mm = String(d.getMinutes()).padStart(2, '0');
+            return `${hh}:${mm}`;
         }
 
         function renderujParkingGrid() {
@@ -239,42 +338,69 @@
             rzad1.innerHTML = '';
             rzad2.innerHTML = '';
 
+            let wolneLicznik = 0;
+            let zajeteLicznik = 0;
+
             SLUPKI_CONFIG.forEach((s, index) => {
-                const stan = stanySlupkow[s.id];
-                const jestZajety = stan === 1;
+                const info = pobierzStatusIEndtime(stanySlupkow[s.id]);
+                const jestZajety = info.status === 1;
                 const jestWybrany = s.id === wybraneMiejsceId;
+
+                if (jestZajety) zajeteLicznik++;
+                else wolneLicznik++;
 
                 const spot = document.createElement('div');
                 spot.className = `parking-spot ${jestZajety ? 'zajety' : 'wolny'} ${jestWybrany ? 'wybrany' : ''}`;
                 spot.onclick = () => wybierzMiejsceNaParkingu(s.id);
 
+                let czasTekst = "";
+                if (jestZajety && info.doKiedy) {
+                    czasTekst = `<div class="spot-time">${formatujPozostalyCzas(info.doKiedy)}</div>`;
+                }
+
                 spot.innerHTML = `
                     <div class="spot-id">${s.id}</div>
-                    <div class="spot-status">${jestZajety ? 'ZABLOK' : 'WOLNY'}</div>
+                    <div class="spot-status">${jestZajety ? 'ZAJĘTY' : 'WOLNY'}</div>
+                    ${czasTekst}
                 `;
 
-                if (index < 5) {
-                    rzad1.appendChild(spot);
-                } else {
-                    rzad2.appendChild(spot);
-                }
+                if (index < 5) rzad1.appendChild(spot);
+                else rzad2.appendChild(spot);
             });
+
+            document.getElementById('statystyki-parkingu').innerHTML = `
+                <span>Wolne: ${wolneLicznik} / 10</span>
+                <span>Zajęte: ${zajeteLicznik} / 10</span>
+            `;
         }
 
         function wybierzMiejsceNaParkingu(id) {
             wybraneMiejsceId = id;
+            ukryjBlad();
             aktualizujWidokPilota();
+        }
+
+        function ukryjBlad() {
+            const el = document.getElementById('komunikat-blad');
+            el.style.display = 'none';
+            el.innerText = '';
+        }
+
+        function pokazBlad(tresc) {
+            const el = document.getElementById('komunikat-blad');
+            el.innerText = tresc;
+            el.style.display = 'block';
         }
 
         function aktualizujWidokPilota() {
             renderujParkingGrid();
 
             SLUPKI_CONFIG.forEach(s => {
-                const stan = stanySlupkow[s.id];
-                const podniesiony = stan === 1;
+                const info = pobierzStatusIEndtime(stanySlupkow[s.id]);
+                const podniesiony = info.status === 1;
                 if (markery[s.id]) {
                     markery[s.id].setStyle({
-                        fillColor: podniesiony ? '#e74c3c' : (stan === 0 ? '#2ecc71' : '#555')
+                        fillColor: podniesiony ? '#e74c3c' : '#2ecc71'
                     });
                 }
             });
@@ -282,9 +408,22 @@
             const panel = document.getElementById('panel-akcji');
             if (wybraneMiejsceId) {
                 panel.classList.add('aktywny');
-                const stan = stanySlupkow[wybraneMiejsceId];
+                const info = pobierzStatusIEndtime(stanySlupkow[wybraneMiejsceId]);
+                const jestZajety = info.status === 1;
+
                 document.getElementById('wybrany-slupek-naglowek').innerText = `Miejsce: ${wybraneMiejsceId}`;
-                document.getElementById('wybrany-slupek-status').innerText = `Status: ${stan === 1 ? 'ZAREZERWOWANE / ZABLOKOWANE' : (stan === 0 ? 'WOLNE' : 'BRAK DANYCH')}`;
+                document.getElementById('wybrany-slupek-status').innerText = `Status: ${jestZajety ? 'ZAJĘTE / ZAREZERWOWANE' : 'WOLNE'}`;
+
+                const elCzas = document.getElementById('wybrany-slupek-czas');
+                if (jestZajety && info.doKiedy) {
+                    elCzas.innerText = `Szacowana dostępność: ${formatujGodzine(info.doKiedy)} (${formatujPozostalyCzas(info.doKiedy)})`;
+                } else {
+                    elCzas.innerText = "";
+                }
+
+                document.getElementById('grupa-czasu').style.display = jestZajety ? 'none' : 'flex';
+                document.getElementById('btn-rezerwuj').style.display = jestZajety ? 'none' : 'block';
+                document.getElementById('btn-przedluz').style.display = jestZajety ? 'block' : 'none';
             } else {
                 panel.classList.remove('aktywny');
             }
@@ -292,12 +431,49 @@
 
         window.rezerwujWybrany = function() {
             if (!wybraneMiejsceId) return;
-            set(ref(database, 'slupki/' + wybraneMiejsceId), 1);
+            ukryjBlad();
+
+            const info = pobierzStatusIEndtime(stanySlupkow[wybraneMiejsceId]);
+            if (info.status === 1) {
+                pokazBlad(`Miejsce ${wybraneMiejsceId} jest już zajęte! Wybierz inne miejsce.`);
+                return;
+            }
+
+            const minuty = parseInt(document.getElementById('czas-rezerwacji').value) || 30;
+            const doKiedy = Date.now() + (minuty * 60 * 1000);
+
+            set(ref(database, 'slupki/' + wybraneMiejsceId), {
+                status: 1,
+                doKiedy: doKiedy
+            });
+        };
+
+        window.przedluzWybrany = function() {
+            if (!wybraneMiejsceId) return;
+            ukryjBlad();
+
+            const info = pobierzStatusIEndtime(stanySlupkow[wybraneMiejsceId]);
+            if (info.status !== 1) {
+                pokazBlad(`Miejsce ${wybraneMiejsceId} nie jest obecnie zajęte.`);
+                return;
+            }
+
+            let bazowyCzas = info.doKiedy > Date.now() ? info.doKiedy : Date.now();
+            const nowyDoKiedy = bazowyCzas + (15 * 60 * 1000);
+
+            set(ref(database, 'slupki/' + wybraneMiejsceId), {
+                status: 1,
+                doKiedy: nowyDoKiedy
+            });
         };
 
         window.zwolnijWybrany = function() {
             if (!wybraneMiejsceId) return;
-            set(ref(database, 'slupki/' + wybraneMiejsceId), 0);
+            ukryjBlad();
+            set(ref(database, 'slupki/' + wybraneMiejsceId), {
+                status: 0,
+                doKiedy: 0
+            });
         };
 
         function generujLasteWyboruSlupka() {
@@ -336,29 +512,28 @@
         function startNasluchSlupka() {
             if (subskrypcjaSlupka) subskrypcjaSlupka();
             subskrypcjaSlupka = onValue(ref(database, 'slupki/' + aktywnySlupekId), (snapshot) => {
-                const data = snapshot.val();
+                const info = pobierzStatusIEndtime(snapshot.val());
                 const kolo = document.getElementById('kolo');
                 const logoTekst = document.getElementById('tekst');
 
-                if (data === 1) {
+                if (info.status === 1) {
                     kolo.style.backgroundColor = '#e74c3c';
                     logoTekst.innerText = "SŁUPEK PODNIESIONY";
                     if (poprzedniStan !== 1) { wykonajSygnalizacje(1); poprzedniStan = 1; }
-                } else if (data === 0) {
+                } else {
                     kolo.style.backgroundColor = '#2ecc71';
                     logoTekst.innerText = "SŁUPEK OPUSZCZONY";
                     if (poprzedniStan !== 0) { wykonajSygnalizacje(0); poprzedniStan = 0; }
-                } else {
-                    kolo.style.backgroundColor = '#555';
-                    logoTekst.innerText = "Brak danych";
-                    poprzedniStan = null;
                 }
             });
         }
 
         window.zwolnijSlupekStacja = function() {
             if (!aktywnySlupekId) return;
-            set(ref(database, 'slupki/' + aktywnySlupekId), 0)
+            set(ref(database, 'slupki/' + aktywnySlupekId), {
+                status: 0,
+                doKiedy: 0
+            })
             .then(() => { document.getElementById('debug').innerText = "Wysłano polecenie ZWOLNIJ (0)"; })
             .catch(err => { document.getElementById('debug').innerText = "Błąd zapisu: " + err.message; });
         };
