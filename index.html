@@ -36,6 +36,7 @@
         .btn-pomaranczowy:active { background-color: #d35400; }
         .btn-fioletowy { background-color: #9b59b6; }
         .btn-fioletowy:active { background-color: #8e44ad; }
+        .btn:disabled { background-color: #555 !important; cursor: not-allowed; opacity: 0.6; }
 
         #map { width: 100%; height: 200px; border-radius: 8px; margin-bottom: 15px; border: 2px solid #555; }
         
@@ -158,7 +159,7 @@
     <div id="widok-wybor" class="widok aktywny">
         <h1>WYBIERZ ROLĘ URZĄDZENIA</h1>
         <button class="btn" onclick="przejdzDo('widok-pilot')">PILOT (KIEROWCA)</button>
-        <button class="btn btn-pomaranczowy" onclick="przejdzDo('widok-wybor-slupka')">SŁUPEK (STACJA)</button>
+        <button class="btn btn-pomaranczowy" onclick="zweryfikujHasloISlupka()">SŁUPEK (STACJA)</button>
     </div>
 
     <div id="widok-pilot" class="widok">
@@ -220,7 +221,7 @@
         <div id="kolo"></div>
         <div id="tekst">Oczekiwanie na aktywację...</div>
         
-        <button class="btn btn-pomaranczowy" onclick="zwolnijSlupekStacja()">ZWOLNIJ SŁUPEK</button>
+        <button class="btn" id="btn-akcja-stacja">ŁADOWANIE...</button>
         <div id="debug">Status: Oczekiwanie</div>
         <button class="btn btn-powrot" onclick="wyczyscIPrzejdzDoWyboru()">← Zmień słupek</button>
     </div>
@@ -267,6 +268,15 @@
         let poprzedniStan = null;
         let intervalZegara = null;
 
+        window.zweryfikujHasloISlupka = function() {
+            const haslo = prompt("Wprowadź hasło dostępu do roli SŁUPEK:");
+            if (haslo === "1234") {
+                przejdzDo('widok-wybor-slupka');
+            } else if (haslo !== null) {
+                alert("Nieprawidłowe hasło!");
+            }
+        };
+
         window.przejdzDo = function(idWidoku) {
             document.querySelectorAll('.widok').forEach(el => el.classList.remove('aktywny'));
             document.getElementById(idWidoku).classList.add('aktywny');
@@ -280,9 +290,13 @@
 
         function pobierzStatusIEndtime(stan) {
             if (typeof stan === 'object' && stan !== null) {
-                return { status: Number(stan.status || 0), doKiedy: Number(stan.doKiedy || 0) };
+                return {
+                    status: Number(stan.status || 0),
+                    doKiedy: Number(stan.doKiedy || 0),
+                    adminLock: Boolean(stan.adminLock)
+                };
             }
-            return { status: Number(stan || 0), doKiedy: 0 };
+            return { status: Number(stan || 0), doKiedy: 0, adminLock: false };
         }
 
         function inicjalizujPilota() {
@@ -354,8 +368,12 @@
                 spot.onclick = () => wybierzMiejsceNaParkingu(s.id);
 
                 let czasTekst = "";
-                if (jestZajety && info.doKiedy) {
-                    czasTekst = `<div class="spot-time">${formatujPozostalyCzas(info.doKiedy)}</div>`;
+                if (jestZajety) {
+                    if (info.adminLock) {
+                        czasTekst = `<div class="spot-time" style="color:#e74c3c;">ADMIN</div>`;
+                    } else if (info.doKiedy) {
+                        czasTekst = `<div class="spot-time">${formatujPozostalyCzas(info.doKiedy)}</div>`;
+                    }
                 }
 
                 spot.innerHTML = `
@@ -412,18 +430,33 @@
                 const jestZajety = info.status === 1;
 
                 document.getElementById('wybrany-slupek-naglowek').innerText = `Miejsce: ${wybraneMiejsceId}`;
-                document.getElementById('wybrany-slupek-status').innerText = `Status: ${jestZajety ? 'ZAJĘTE / ZAREZERWOWANE' : 'WOLNE'}`;
 
-                const elCzas = document.getElementById('wybrany-slupek-czas');
-                if (jestZajety && info.doKiedy) {
-                    elCzas.innerText = `Szacowana dostępność: ${formatujGodzine(info.doKiedy)} (${formatujPozostalyCzas(info.doKiedy)})`;
+                if (info.adminLock) {
+                    document.getElementById('wybrany-slupek-status').innerText = `Status: ZABLOKOWANE PRZEZ ADMINA / SŁUPEK`;
+                    document.getElementById('wybrany-slupek-czas').innerText = `Zwolnienie możliwe wyłącznie ze stacji słupka!`;
+                    document.getElementById('grupa-czasu').style.display = 'none';
+                    document.getElementById('btn-rezerwuj').style.display = 'none';
+                    document.getElementById('btn-przedluz').style.display = 'none';
+                    document.getElementById('btn-zwolnij').style.display = 'none';
+                } else if (jestZajety) {
+                    document.getElementById('wybrany-slupek-status').innerText = `Status: ZAJĘTE / ZAREZERWOWANE`;
+                    if (info.doKiedy) {
+                        document.getElementById('wybrany-slupek-czas').innerText = `Szacowana dostępność: ${formatujGodzine(info.doKiedy)} (${formatujPozostalyCzas(info.doKiedy)})`;
+                    } else {
+                        document.getElementById('wybrany-slupek-czas').innerText = "";
+                    }
+                    document.getElementById('grupa-czasu').style.display = 'none';
+                    document.getElementById('btn-rezerwuj').style.display = 'none';
+                    document.getElementById('btn-przedluz').style.display = 'block';
+                    document.getElementById('btn-zwolnij').style.display = 'block';
                 } else {
-                    elCzas.innerText = "";
+                    document.getElementById('wybrany-slupek-status').innerText = `Status: WOLNE`;
+                    document.getElementById('wybrany-slupek-czas').innerText = "";
+                    document.getElementById('grupa-czasu').style.display = 'flex';
+                    document.getElementById('btn-rezerwuj').style.display = 'block';
+                    document.getElementById('btn-przedluz').style.display = 'none';
+                    document.getElementById('btn-zwolnij').style.display = 'none';
                 }
-
-                document.getElementById('grupa-czasu').style.display = jestZajety ? 'none' : 'flex';
-                document.getElementById('btn-rezerwuj').style.display = jestZajety ? 'none' : 'block';
-                document.getElementById('btn-przedluz').style.display = jestZajety ? 'block' : 'none';
             } else {
                 panel.classList.remove('aktywny');
             }
@@ -444,7 +477,8 @@
 
             set(ref(database, 'slupki/' + wybraneMiejsceId), {
                 status: 1,
-                doKiedy: doKiedy
+                doKiedy: doKiedy,
+                adminLock: false
             });
         };
 
@@ -453,6 +487,10 @@
             ukryjBlad();
 
             const info = pobierzStatusIEndtime(stanySlupkow[wybraneMiejsceId]);
+            if (info.adminLock) {
+                pokazBlad(`Miejsce ${wybraneMiejsceId} posiada blokadę admina.`);
+                return;
+            }
             if (info.status !== 1) {
                 pokazBlad(`Miejsce ${wybraneMiejsceId} nie jest obecnie zajęte.`);
                 return;
@@ -463,16 +501,23 @@
 
             set(ref(database, 'slupki/' + wybraneMiejsceId), {
                 status: 1,
-                doKiedy: nowyDoKiedy
+                doKiedy: nowyDoKiedy,
+                adminLock: false
             });
         };
 
         window.zwolnijWybrany = function() {
             if (!wybraneMiejsceId) return;
             ukryjBlad();
+            const info = pobierzStatusIEndtime(stanySlupkow[wybraneMiejsceId]);
+            if (info.adminLock) {
+                pokazBlad(`Brak uprawnień. Miejsce zablokowane ze stacji słupka/admina.`);
+                return;
+            }
             set(ref(database, 'slupki/' + wybraneMiejsceId), {
                 status: 0,
-                doKiedy: 0
+                doKiedy: 0,
+                adminLock: false
             });
         };
 
@@ -515,14 +560,21 @@
                 const info = pobierzStatusIEndtime(snapshot.val());
                 const kolo = document.getElementById('kolo');
                 const logoTekst = document.getElementById('tekst');
+                const btnAkcja = document.getElementById('btn-akcja-stacja');
 
                 if (info.status === 1) {
                     kolo.style.backgroundColor = '#e74c3c';
-                    logoTekst.innerText = "SŁUPEK PODNIESIONY";
+                    logoTekst.innerText = info.adminLock ? "PODNIESIONY (BLOKADA ADMINA)" : "SŁUPEK PODNIESIONY";
+                    btnAkcja.innerText = "ZWOLNIJ SŁUPEK";
+                    btnAkcja.className = "btn btn-zielony";
+                    btnAkcja.onclick = zwolnijSlupekStacja;
                     if (poprzedniStan !== 1) { wykonajSygnalizacje(1); poprzedniStan = 1; }
                 } else {
                     kolo.style.backgroundColor = '#2ecc71';
                     logoTekst.innerText = "SŁUPEK OPUSZCZONY";
+                    btnAkcja.innerText = "ZABLOKUJ SŁUPEK (BLOKADA ADMINA)";
+                    btnAkcja.className = "btn btn-czerwony";
+                    btnAkcja.onclick = zablokujSlupekStacja;
                     if (poprzedniStan !== 0) { wykonajSygnalizacje(0); poprzedniStan = 0; }
                 }
             });
@@ -532,9 +584,21 @@
             if (!aktywnySlupekId) return;
             set(ref(database, 'slupki/' + aktywnySlupekId), {
                 status: 0,
-                doKiedy: 0
+                doKiedy: 0,
+                adminLock: false
             })
-            .then(() => { document.getElementById('debug').innerText = "Wysłano polecenie ZWOLNIJ (0)"; })
+            .then(() => { document.getElementById('debug').innerText = "Zwolniono słupek ze stacji"; })
+            .catch(err => { document.getElementById('debug').innerText = "Błąd zapisu: " + err.message; });
+        };
+
+        window.zablokujSlupekStacja = function() {
+            if (!aktywnySlupekId) return;
+            set(ref(database, 'slupki/' + aktywnySlupekId), {
+                status: 1,
+                doKiedy: 0,
+                adminLock: true
+            })
+            .then(() => { document.getElementById('debug').innerText = "Zablokowano słupek (Blokada Admina)"; })
             .catch(err => { document.getElementById('debug').innerText = "Błąd zapisu: " + err.message; });
         };
 
