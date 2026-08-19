@@ -12,12 +12,12 @@
         .widok { display: none; width: 100%; max-width: 600px; padding: 20px; flex-direction: column; align-items: center; text-align: center; }
         .widok.aktywny { display: flex; }
 
-        h1, h2 { margin-bottom: 20px; }
+        h1, h2, h3 { margin-bottom: 15px; }
         
         .btn {
             width: 100%;
             padding: 16px;
-            margin: 10px 0;
+            margin: 8px 0;
             font-size: 18px;
             font-weight: bold;
             color: white;
@@ -35,11 +35,64 @@
         .btn-pomaranczowy { background-color: #e67e22; }
         .btn-pomaranczowy:active { background-color: #d35400; }
 
-        #map { width: 100%; height: 300px; border-radius: 8px; margin-bottom: 20px; border: 2px solid #555; }
-        .lista-slupkow-pilot { width: 100%; display: flex; flex-direction: column; gap: 10px; }
-        .karta-slupka { background: #333; padding: 15px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; }
-        .karta-slupka .akcje { display: flex; gap: 10px; }
-        .karta-slupka .akcje .btn { width: auto; padding: 10px 15px; margin: 0; font-size: 14px; }
+        #map { width: 100%; height: 220px; border-radius: 8px; margin-bottom: 15px; border: 2px solid #555; }
+        
+        .parking-container {
+            width: 100%;
+            background: #111;
+            padding: 12px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #444;
+        }
+        .parking-row {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 6px;
+        }
+        .parking-road {
+            height: 20px;
+            margin: 8px 0;
+            background: #2a2a2a;
+            border-top: 2px dashed #666;
+            border-bottom: 2px dashed #666;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            letter-spacing: 2px;
+            color: #888;
+        }
+        .parking-spot {
+            background: #222;
+            border: 2px solid #555;
+            border-radius: 6px;
+            padding: 8px 2px;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 55px;
+            transition: all 0.2s;
+        }
+        .parking-spot.wolny { border-color: #2ecc71; color: #2ecc71; }
+        .parking-spot.zajety { border-color: #e74c3c; color: #e74c3c; background: #3a1a1a; }
+        .parking-spot.wybrany { outline: 3px solid #f1c40f; transform: scale(1.04); }
+        .parking-spot .spot-id { font-weight: bold; font-size: 13px; }
+        .parking-spot .spot-status { font-size: 9px; margin-top: 3px; font-weight: bold; }
+
+        .panel-akcji-pilot {
+            width: 100%;
+            background: #333;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            display: none;
+        }
+        .panel-akcji-pilot.aktywny { display: block; }
+        .prip-buttons { display: flex; gap: 10px; margin-top: 10px; }
+        .prip-buttons .btn { margin: 0; }
 
         #kolo { width: 160px; height: 160px; border-radius: 50%; margin: 20px auto; background-color: #555; transition: background-color 0.3s ease; }
         #tekst { font-size: 22px; font-weight: bold; margin-bottom: 15px; }
@@ -52,34 +105,45 @@
         }
 
         #debug { margin-top: 15px; font-family: monospace; font-size: 13px; color: #ff9f43; }
-        .btn-powrot { margin-top: 20px; background-color: #555; width: auto; padding: 8px 20px; font-size: 14px; }
+        .btn-powrot { margin-top: 15px; background-color: #555; width: auto; padding: 8px 20px; font-size: 14px; }
     </style>
 </head>
 <body>
 
-    <!-- WIDOK 1: SELEKTOR ROLI -->
     <div id="widok-wybor" class="widok aktywny">
         <h1>WYBIERZ ROLĘ URZĄDZENIA</h1>
         <button class="btn" onclick="przejdzDo('widok-pilot')">PILOT (KIEROWCA)</button>
         <button class="btn btn-pomaranczowy" onclick="przejdzDo('widok-wybor-slupka')">SŁUPEK (STACJA)</button>
     </div>
 
-    <!-- WIDOK 2A: PILOT -->
     <div id="widok-pilot" class="widok">
-        <h2>PANEL PILOTA</h2>
+        <h2>PANEL PILOTA - PARKING</h2>
         <div id="map"></div>
-        <div class="lista-slupkow-pilot" id="kontener-listy-pilota"></div>
+
+        <div class="parking-container">
+            <div class="parking-row" id="parking-rzad-1"></div>
+            <div class="parking-road">PAS RUCHU</div>
+            <div class="parking-row" id="parking-rzad-2"></div>
+        </div>
+
+        <div id="panel-akcji" class="panel-akcji-pilot">
+            <h3 id="wybrany-slupek-naglowek">Wybrane miejsce: -</h3>
+            <p id="wybrany-slupek-status" style="font-size: 14px;"></p>
+            <div class="prip-buttons">
+                <button class="btn btn-czerwony" onclick="rezerwujWybrany()">REZERWUJ</button>
+                <button class="btn btn-zielony" onclick="zwolnijWybrany()">ZWOLNIJ</button>
+            </div>
+        </div>
+
         <button class="btn btn-powrot" onclick="przejdzDo('widok-wybor')">← Zmień rolę</button>
     </div>
 
-    <!-- WIDOK 2B: SELEKTOR IDENTYFIKATORA SŁUPKA -->
     <div id="widok-wybor-slupka" class="widok">
         <h2>WYBIERZ IDENTYFIKATOR SŁUPKA</h2>
         <div id="kontener-wyboru-slupka" style="width: 100%;"></div>
         <button class="btn btn-powrot" onclick="przejdzDo('widok-wybor')">← Zmień rolę</button>
     </div>
 
-    <!-- WIDOK 2C: TERMINAL SŁUPKA -->
     <div id="widok-status-slupka" class="widok">
         <button id="btn-permission" onclick="odblokujSygnalizacje()">
             DOTKNIJ EKRANU TEL. SŁUPKA<br><br>
@@ -90,7 +154,7 @@
         <div id="kolo"></div>
         <div id="tekst">Oczekiwanie na aktywację...</div>
         
-        <button class="btn btn-pomaranczowy" onclick="zwolnijSlupek()">ZWOLNIJ SŁUPEK</button>
+        <button class="btn btn-pomaranczowy" onclick="zwolnijSlupekStacja()">ZWOLNIJ SŁUPEK</button>
         <div id="debug">Status: Oczekiwanie</div>
         <button class="btn btn-powrot" onclick="wyczyscIPrzejdzDoWyboru()">← Zmień słupek</button>
     </div>
@@ -100,16 +164,15 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
-        // Podmień wartości w poniższym obiekcie na dane wygenerowane w nowym projekcie Firebase
         const firebaseConfig = {
-  apiKey: "AIzaSyDNHjRqpMW1yeIynRmuYcRYMVabn4O31M0",
-  authDomain: "sterowanie-slupkiem10-v2.firebaseapp.com",
-  databaseURL: "https://sterowanie-slupkiem10-v2-default-rtdb.europe-west1.firebasedatabase.app",
-  projectId: "sterowanie-slupkiem10-v2",
-  storageBucket: "sterowanie-slupkiem10-v2.firebasestorage.app",
-  messagingSenderId: "666796401317",
-  appId: "1:666796401317:web:973a89fe20ec9b8f6d234c"
-};
+            apiKey: "AIzaSyDNHjRqpMW1yeIynRmuYcRYMVabn4O31M0",
+            authDomain: "sterowanie-slupkiem10-v2.firebaseapp.com",
+            databaseURL: "https://sterowanie-slupkiem10-v2-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "sterowanie-slupkiem10-v2",
+            storageBucket: "sterowanie-slupkiem10-v2.firebasestorage.app",
+            messagingSenderId: "666796401317",
+            appId: "1:666796401317:web:973a89fe20ec9b8f6d234c"
+        };
 
         const app = initializeApp(firebaseConfig);
         const database = getDatabase(app);
@@ -130,6 +193,7 @@
         let mapa = null;
         let markery = {};
         let stanySlupkow = {};
+        let wybraneMiejsceId = null;
         let aktywnySlupekId = null;
         let subskrypcjaSlupka = null;
         let audioCtx = null;
@@ -154,7 +218,7 @@
 
                 SLUPKI_CONFIG.forEach(s => {
                     const marker = L.circleMarker([s.lat, s.lng], {
-                        radius: 8, fillColor: "#555", color: "#fff", weight: 2, opacity: 1, fillOpacity: 0.8
+                        radius: 7, fillColor: "#555", color: "#fff", weight: 2, opacity: 1, fillOpacity: 0.8
                     }).addTo(mapa).bindPopup(`Słupek ${s.id}`);
                     markery[s.id] = marker;
                 });
@@ -167,38 +231,71 @@
             });
         }
 
+        function renderujParkingGrid() {
+            const rzad1 = document.getElementById('parking-rzad-1');
+            const rzad2 = document.getElementById('parking-rzad-2');
+            rzad1.innerHTML = '';
+            rzad2.innerHTML = '';
+
+            SLUPKI_CONFIG.forEach((s, index) => {
+                const stan = stanySlupkow[s.id];
+                const jestZajety = stan === 1;
+                const jestWybrany = s.id === wybraneMiejsceId;
+
+                const spot = document.createElement('div');
+                spot.className = `parking-spot ${jestZajety ? 'zajety' : 'wolny'} ${jestWybrany ? 'wybrany' : ''}`;
+                spot.onclick = () => wybierzMiejsceNaParkingu(s.id);
+
+                spot.innerHTML = `
+                    <div class="spot-id">${s.id}</div>
+                    <div class="spot-status">${jestZajety ? 'ZABLOK' : 'WOLNY'}</div>
+                `;
+
+                if (index < 5) {
+                    rzad1.appendChild(spot);
+                } else {
+                    rzad2.appendChild(spot);
+                }
+            });
+        }
+
+        function wybierzMiejsceNaParkingu(id) {
+            wybraneMiejsceId = id;
+            aktualizujWidokPilota();
+        }
+
         function aktualizujWidokPilota() {
-            const kontener = document.getElementById('kontener-listy-pilota');
-            kontener.innerHTML = '';
+            renderujParkingGrid();
 
             SLUPKI_CONFIG.forEach(s => {
                 const stan = stanySlupkow[s.id];
                 const podniesiony = stan === 1;
-
                 if (markery[s.id]) {
                     markery[s.id].setStyle({
                         fillColor: podniesiony ? '#e74c3c' : (stan === 0 ? '#2ecc71' : '#555')
                     });
                 }
-
-                const karta = document.createElement('div');
-                karta.className = 'karta-slupka';
-                karta.innerHTML = `
-                    <div>
-                        <strong>Słupek ${s.id}</strong><br>
-                        <small>Status: ${podniesiony ? 'PODNIESIONY' : (stan === 0 ? 'OPUSZCZONY' : 'BRAK DANYCH')}</small>
-                    </div>
-                    <div class="akcje">
-                        <button class="btn btn-czerwony" onclick="zmienStanSlupka('${s.id}', 1)">Zablokuj</button>
-                        <button class="btn btn-zielony" onclick="zmienStanSlupka('${s.id}', 0)">Zwolnij</button>
-                    </div>
-                `;
-                kontener.appendChild(karta);
             });
+
+            const panel = document.getElementById('panel-akcji');
+            if (wybraneMiejsceId) {
+                panel.classList.add('aktywny');
+                const stan = stanySlupkow[wybraneMiejsceId];
+                document.getElementById('wybrany-slupek-naglowek').innerText = `Miejsce: ${wybraneMiejsceId}`;
+                document.getElementById('wybrany-slupek-status').innerText = `Status: ${stan === 1 ? 'ZAREZERWOWANE / ZABLOKOWANE' : (stan === 0 ? 'WOLNE' : 'BRAK DANYCH')}`;
+            } else {
+                panel.classList.remove('aktywny');
+            }
         }
 
-        window.zmienStanSlupka = function(id, nowyStan) {
-            set(ref(database, 'slupki/' + id), nowyStan);
+        window.rezerwujWybrany = function() {
+            if (!wybraneMiejsceId) return;
+            set(ref(database, 'slupki/' + wybraneMiejsceId), 1);
+        };
+
+        window.zwolnijWybrany = function() {
+            if (!wybraneMiejsceId) return;
+            set(ref(database, 'slupki/' + wybraneMiejsceId), 0);
         };
 
         function generujLasteWyboruSlupka() {
@@ -257,7 +354,7 @@
             });
         }
 
-        window.zwolnijSlupek = function() {
+        window.zwolnijSlupekStacja = function() {
             if (!aktywnySlupekId) return;
             set(ref(database, 'slupki/' + aktywnySlupekId), 0)
             .then(() => { document.getElementById('debug').innerText = "Wysłano polecenie ZWOLNIJ (0)"; })
