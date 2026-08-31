@@ -43,6 +43,7 @@
     .prip-buttons { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
     #kolo { width: 160px; height: 160px; border-radius: 50%; margin: 20px auto; background-color: #555; transition: background-color 0.3s; }
     #tekst { font-size: 22px; font-weight: bold; margin-bottom: 15px; text-align: center; }
+    #rejestracja-slupka { font-size: 26px; font-weight: bold; color: #f1c40f; margin-bottom: 15px; text-align: center; min-height: 32px; }
     #btn-permission { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: rgba(41, 128, 185, 0.95); color: white; z-index: 9999; border: none; font-size: 24px; font-weight: bold; cursor: pointer; padding: 40px; text-align: center; display: none; }
     #debug { margin-top: 15px; font-family: monospace; font-size: 13px; color: #ff9f43; text-align: center; }
     .btn-powrot { margin-top: 15px; background-color: #555; width: auto; padding: 8px 20px; font-size: 14px; align-self: center; }
@@ -111,6 +112,7 @@
     <h2 id="naglowek-slupka">Status Słupka</h2>
     <div id="kolo"></div>
     <div id="tekst">Oczekiwanie na aktywację...</div>
+    <div id="rejestracja-slupka"></div>
     <button class="btn" id="btn-akcja-stacja" onclick="przelaczStanStacji()">ŁADOWANIE...</button>
     <div id="debug">Status: Oczekiwanie</div>
     <button class="btn btn-powrot" onclick="wyczyscIPrzejdzDoWyboru()">Zmień słupek</button>
@@ -280,6 +282,7 @@
 
     function wybierzMiejsceNaParkingu(id) {
       wybraneMiejsceId = id;
+      document.getElementById('numer-rejestracyjny').value = '';
       ukryjBlad();
       aktualizujWidokPilota();
     }
@@ -449,11 +452,13 @@
         const info = pobierzSlupekData(snapshot.val());
         const kolo = document.getElementById('kolo');
         const logoTekst = document.getElementById('tekst');
+        const elRejestracja = document.getElementById('rejestracja-slupka');
         const btnAkcja = document.getElementById('btn-akcja-stacja');
 
         if (info.status === 1) {
           kolo.style.backgroundColor = '#e74c3c';
           logoTekst.innerText = "SŁUPEK PODNIESIONY";
+          elRejestracja.innerText = info.rejestracja ? `POJAZD: ${info.rejestracja}` : "POJAZD: BRAK DANYCH";
           btnAkcja.className = "btn btn-zielony";
           btnAkcja.innerText = "ZWOLNIJ SŁUPEK";
           btnAkcja.disabled = false;
@@ -461,6 +466,7 @@
         } else {
           kolo.style.backgroundColor = '#2ecc71';
           logoTekst.innerText = "SŁUPEK OPUSZCZONY";
+          elRejestracja.innerText = "";
           btnAkcja.className = "btn btn-pomaranczowy";
           btnAkcja.innerText = "ZABLOKUJ (ADMIN)";
           btnAkcja.disabled = false;
