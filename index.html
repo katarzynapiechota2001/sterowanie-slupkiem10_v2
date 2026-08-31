@@ -154,11 +154,19 @@
     let stanySlupkow = {};
     let wybraneMiejsceId = null;
     let aktywnySlupekId = null;
+    let aktualnyStanStacji = null;
     let subskrypcjaSlupka = null;
     let audioCtx = null;
     let interfejsOdblokowany = false;
     let poprzedniStan = null;
     let intervalZegara = null;
+
+    onValue(ref(database, 'slupki'), (snapshot) => {
+      stanySlupkow = snapshot.val() || {};
+      if (document.getElementById('widok-pilot').classList.contains('aktywny')) {
+        aktualizujWidokPilota();
+      }
+    });
 
     function normalizujRejestracje(str) {
       return String(str || '').replace(/\s+/g, '').toUpperCase();
@@ -211,10 +219,7 @@
         intervalZegara = setInterval(aktualizujWidokPilota, 5000);
       }
 
-      onValue(ref(database, 'slupki'), (snapshot) => {
-        stanySlupkow = snapshot.val() || {};
-        aktualizujWidokPilota();
-      });
+      aktualizujWidokPilota();
     }
 
     function formatujPozostalyCzas(doKiedy) {
@@ -427,29 +432,26 @@
 
     function wybierzSlupekIUruchom(id) {
       aktywnySlupekId = id;
+      aktualnyStanStacji = null;
       document.getElementById('naglowek-slupka').innerText = "Status Słupka " + id;
       document.getElementById('btn-permission').style.display = 'block';
+      
+      startNasluchSlupka();
       przejdzDo('widok-status-slupka');
     }
 
-    window.odblokujSygnalizacje = function() {
-      try {
-        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        interfejsOdblokowany = true;
-        document.getElementById('btn-permission').style.display = 'none';
-        document.getElementById('tekst').innerText = "Połączono. Oczekiwanie na dane...";
-        document.getElementById('debug').innerText = "Status: Aktywny";
-        if (navigator.vibrate) navigator.vibrate(100);
-        startNasluchSlupka();
-      } catch (e) {
-        document.getElementById('debug').innerText = "Błąd AudioContext: " + e.message;
-      }
-    };
-
     function startNasluchSlupka() {
-      if (subskrypcjaSlupka) subskrypcjaSlupka();
+      if (typeof subskrypcjaSlupka === 'function') {
+        subskrypcjaSlupka();
+      }
+
       subskrypcjaSlupka = onValue(ref(database, 'slupki/' + aktywnySlupekId), (snapshot) => {
-        const info = pobierzSlupekData(snapshot.val());
+        const data = snapshot.val();
+        const info = pobierzSlupekData(data);
+        
+        aktualnyStanStacji = info;
+        stanySlupkow[aktywnySlupekId] = data;
+
         const kolo = document.getElementById('kolo');
         const logoTekst = document.getElementById('tekst');
         const elRejestracja = document.getElementById('rejestracja-slupka');
@@ -462,7 +464,10 @@
           btnAkcja.className = "btn btn-zielony";
           btnAkcja.innerText = "ZWOLNIJ SŁUPEK";
           btnAkcja.disabled = false;
-          if (poprzedniStan !== 1) { wykonajSygnalizacje(1); poprzedniStan = 1; }
+          if (poprzedniStan !== 1) { 
+            if (interfejsOdblokowany) wykonajSygnalizacje(1); 
+            poprzedniStan = 1; 
+          }
         } else {
           kolo.style.backgroundColor = '#2ecc71';
           logoTekst.innerText = "SŁUPEK OPUSZCZONY";
@@ -470,15 +475,34 @@
           btnAkcja.className = "btn btn-pomaranczowy";
           btnAkcja.innerText = "ZABLOKUJ (ADMIN)";
           btnAkcja.disabled = false;
-          if (poprzedniStan !== 0) { wykonajSygnalizacje(0); poprzedniStan = 0; }
+          if (poprzedniStan !== 0) { 
+            if (interfejsOdblokowany) wykonajSygnalizacje(0); 
+            poprzedniStan = 0; 
+          }
         }
       });
     }
 
+    window.odblokujSygnalizacje = function() {
+      try {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        interfejsOdblokowany = true;
+        document.getElementById('btn-permission').style.display = 'none';
+        document.getElementById('debug').innerText = "Status: Aktywny";
+        if (navigator.vibrate) navigator.vibrate(100);
+      } catch (e) {
+        document.getElementById('debug').innerText = "Błąd AudioContext: " + e.message;
+      }
+    };
+
     window.przelaczStanStacji = function() {
-      if (!aktywnySlupekId) return;
-      const info = pobierzSlupekData(stanySlupkow[aktywnySlupekId]);
-      const nowyStan = info.status === 1 ? 0 : 1;
+      if (!aktywnySlupekId || !aktualnyStanStacji) {
+        document.getElementById('debug').innerText = "Błąd: Brak synchronizacji danych słupka";
+        return;
+      }
+
+      const obecnyStan = aktualnyStanStacji.status;
+      const nowyStan = obecnyStan === 1 ? 0 : 1;
       const nowyCzas = nowyStan === 1 ? Date.now() + (30 * 60 * 1000) : 0;
 
       set(ref(database, 'slupki/' + aktywnySlupekId), {
@@ -486,12 +510,21 @@
         doKiedy: nowyCzas,
         rejestracja: nowyStan === 1 ? "ADMIN" : ""
       })
-      .then(() => { document.getElementById('debug').innerText = `Zmieniono stan słupka ${aktywnySlupekId} na: ${nowyStan}`; })
-      .catch(err => { document.getElementById('debug').innerText = "Błąd zapisu: " + err.message; });
+      .then(() => { 
+        document.getElementById('debug').innerText = `Zmieniono stan słupka ${aktywnySlupekId} na: ${nowyStan}`; 
+      })
+      .catch(err => { 
+        document.getElementById('debug').innerText = "Błąd zapisu: " + err.message; 
+      });
     };
 
     window.wyczyscIPrzejdzDoWyboru = function() {
+      if (typeof subskrypcjaSlupka === 'function') {
+        subskrypcjaSlupka();
+        subskrypcjaSlupka = null;
+      }
       aktywnySlupekId = null;
+      aktualnyStanStacji = null;
       poprzedniStan = null;
       przejdzDo('widok-wybor-slupka');
     };
