@@ -38,7 +38,7 @@
     .panel-akcji-pilot.aktywny { display: block; }
     .form-group { margin: 10px 0; display: flex; flex-direction: column; gap: 5px; }
     .form-group label { font-size: 13px; color: #ccc; }
-    .form-group select { padding: 10px; border-radius: 6px; border: 1px solid #555; background: #222; color: white; font-size: 15px; }
+    .form-group select, .form-group input { padding: 10px; border-radius: 6px; border: 1px solid #555; background: #222; color: white; font-size: 15px; }
     .komunikat-blad { background: #c0392b; color: white; padding: 10px; border-radius: 6px; margin-bottom: 10px; font-size: 13px; display: none; font-weight: bold; text-align: center; }
     .prip-buttons { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
     #kolo { width: 160px; height: 160px; border-radius: 50%; margin: 20px auto; background-color: #555; transition: background-color 0.3s; }
@@ -72,9 +72,16 @@
     </div>
     <div id="panel-akcji" class="panel-akcji-pilot">
       <h3 id="wybrany-slupek-naglowek">Wybrane miejsce: </h3>
-      <p id="wybrany-slupek-status" style="font-size: 14px; margin-bottom: 8px;"></p>
+      <p id="wybrany-slupek-status" style="font-size: 14px; margin-bottom: 4px;"></p>
+      <p id="wybrany-slupek-rejestracja" style="font-size: 13px; color: #3498db; margin-bottom: 4px;"></p>
       <p id="wybrany-slupek-czas" style="font-size: 13px; color: #f1c40f; margin-bottom: 10px;"></p>
       <div id="komunikat-blad" class="komunikat-blad"></div>
+      
+      <div class="form-group">
+        <label for="numer-rejestracyjny">Numer rejestracyjny pojazdu:</label>
+        <input type="text" id="numer-rejestracyjny" placeholder="np. EL12345" style="text-transform: uppercase;">
+      </div>
+
       <div class="form-group" id="grupa-czasu">
         <label for="czas-rezerwacji">Czas rezerwacji:</label>
         <select id="czas-rezerwacji">
@@ -175,14 +182,15 @@
       }
     };
 
-    function pobierzStatusIEndtime(stan) {
+    function pobierzSlupekData(stan) {
       if (typeof stan === 'object' && stan !== null) {
         return {
           status: Number(stan.status || 0),
-          doKiedy: Number(stan.doKiedy || 0)
+          doKiedy: Number(stan.doKiedy || 0),
+          rejestracja: String(stan.rejestracja || '').toUpperCase()
         };
       }
-      return { status: Number(stan || 0), doKiedy: 0 };
+      return { status: Number(stan || 0), doKiedy: 0, rejestracja: '' };
     }
 
     function inicjalizujPilota() {
@@ -239,7 +247,7 @@
       let zajeteLicznik = 0;
 
       SLUPKI_CONFIG.forEach((s, index) => {
-        const info = pobierzStatusIEndtime(stanySlupkow[s.id]);
+        const info = pobierzSlupekData(stanySlupkow[s.id]);
         const jestZajety = info.status === 1;
         const jestWybrany = s.id === wybraneMiejsceId;
 
@@ -293,7 +301,7 @@
       renderujParkingGrid();
 
       SLUPKI_CONFIG.forEach(s => {
-        const info = pobierzStatusIEndtime(stanySlupkow[s.id]);
+        const info = pobierzSlupekData(stanySlupkow[s.id]);
         const podniesiony = info.status === 1;
         if (markery[s.id]) {
           markery[s.id].setStyle({
@@ -305,11 +313,18 @@
       const panel = document.getElementById('panel-akcji');
       if (wybraneMiejsceId) {
         panel.classList.add('aktywny');
-        const info = pobierzStatusIEndtime(stanySlupkow[wybraneMiejsceId]);
+        const info = pobierzSlupekData(stanySlupkow[wybraneMiejsceId]);
         const jestZajety = info.status === 1;
 
         document.getElementById('wybrany-slupek-naglowek').innerText = `Miejsce: ${wybraneMiejsceId}`;
         document.getElementById('wybrany-slupek-status').innerText = `Status: ${jestZajety ? 'ZAJĘTE / ZAREZERWOWANE' : 'WOLNE'}`;
+
+        const elRejestracja = document.getElementById('wybrany-slupek-rejestracja');
+        if (jestZajety && info.rejestracja) {
+          elRejestracja.innerText = `Rejestracja: ${info.rejestracja}`;
+        } else {
+          elRejestracja.innerText = "";
+        }
 
         const elCzas = document.getElementById('wybrany-slupek-czas');
         if (jestZajety && info.doKiedy) {
@@ -329,41 +344,66 @@
     window.rezerwujWybrany = function() {
       if (!wybraneMiejsceId) return;
       ukryjBlad();
-      const info = pobierzStatusIEndtime(stanySlupkow[wybraneMiejsceId]);
+      const info = pobierzSlupekData(stanySlupkow[wybraneMiejsceId]);
       if (info.status === 1) {
         pokazBlad(`Miejsce ${wybraneMiejsceId} jest już zajęte! Wybierz inne miejsce.`);
         return;
       }
+      
+      const tablica = document.getElementById('numer-rejestracyjny').value.trim().toUpperCase();
+      if (!tablica) {
+        pokazBlad("Musisz podać numer rejestracyjny pojazdu!");
+        return;
+      }
+
       const minuty = parseInt(document.getElementById('czas-rezerwacji').value) || 30;
       const doKiedy = Date.now() + (minuty * 60 * 1000);
       set(ref(database, 'slupki/' + wybraneMiejsceId), {
         status: 1,
-        doKiedy: doKiedy
+        doKiedy: doKiedy,
+        rejestracja: tablica
       });
     };
 
     window.przedluzWybrany = function() {
       if (!wybraneMiejsceId) return;
       ukryjBlad();
-      const info = pobierzStatusIEndtime(stanySlupkow[wybraneMiejsceId]);
+      const info = pobierzSlupekData(stanySlupkow[wybraneMiejsceId]);
       if (info.status !== 1) {
         pokazBlad(`Miejsce ${wybraneMiejsceId} nie jest obecnie zajęte.`);
         return;
       }
+
+      const tablica = document.getElementById('numer-rejestracyjny').value.trim().toUpperCase();
+      if (!tablica || tablica !== info.rejestracja) {
+        pokazBlad("Niepoprawny numer rejestracyjny. Przedłużenie zablokowane.");
+        return;
+      }
+
       let bazowyCzas = info.doKiedy > Date.now() ? info.doKiedy : Date.now();
       const nowyDoKiedy = bazowyCzas + (15 * 60 * 1000);
       set(ref(database, 'slupki/' + wybraneMiejsceId), {
         status: 1,
-        doKiedy: nowyDoKiedy
+        doKiedy: nowyDoKiedy,
+        rejestracja: info.rejestracja
       });
     };
 
     window.zwolnijWybrany = function() {
       if (!wybraneMiejsceId) return;
       ukryjBlad();
+      const info = pobierzSlupekData(stanySlupkow[wybraneMiejsceId]);
+      const tablica = document.getElementById('numer-rejestracyjny').value.trim().toUpperCase();
+
+      if (info.rejestracja && tablica !== info.rejestracja) {
+        pokazBlad(`Brak uprawnień. Podana rejestracja (${tablica || 'BRAK'}) nie zgadza się z rezerwacją (${info.rejestracja}).`);
+        return;
+      }
+
       set(ref(database, 'slupki/' + wybraneMiejsceId), {
         status: 0,
-        doKiedy: 0
+        doKiedy: 0,
+        rejestracja: ""
       });
     };
 
@@ -403,7 +443,7 @@
     function startNasluchSlupka() {
       if (subskrypcjaSlupka) subskrypcjaSlupka();
       subskrypcjaSlupka = onValue(ref(database, 'slupki/' + aktywnySlupekId), (snapshot) => {
-        const info = pobierzStatusIEndtime(snapshot.val());
+        const info = pobierzSlupekData(snapshot.val());
         const kolo = document.getElementById('kolo');
         const logoTekst = document.getElementById('tekst');
         const btnAkcja = document.getElementById('btn-akcja-stacja');
@@ -428,13 +468,14 @@
 
     window.przelaczStanStacji = function() {
       if (!aktywnySlupekId) return;
-      const info = pobierzStatusIEndtime(stanySlupkow[aktywnySlupekId]);
+      const info = pobierzSlupekData(stanySlupkow[aktywnySlupekId]);
       const nowyStan = info.status === 1 ? 0 : 1;
       const nowyCzas = nowyStan === 1 ? Date.now() + (30 * 60 * 1000) : 0;
 
       set(ref(database, 'slupki/' + aktywnySlupekId), {
         status: nowyStan,
-        doKiedy: nowyCzas
+        doKiedy: nowyCzas,
+        rejestracja: nowyStan === 1 ? "ADMIN" : ""
       })
       .then(() => { document.getElementById('debug').innerText = `Zmieniono stan słupka ${aktywnySlupekId} na: ${nowyStan}`; })
       .catch(err => { document.getElementById('debug').innerText = "Błąd zapisu: " + err.message; });
